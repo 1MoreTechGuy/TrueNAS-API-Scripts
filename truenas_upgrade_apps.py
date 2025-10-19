@@ -1,3 +1,12 @@
+"""
+truenas_upgrade_apps.py
+
+This script connects to TrueNAS instances and initiates application upgrades where available.
+
+Acknowledgement:
+This file was created with the assistance of GitHub Copilot. Review and testing were performed by the author.
+"""
+
 import asyncio
 import json
 import os

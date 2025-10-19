@@ -122,3 +122,7 @@ A variable group can be used to define the environment variables. SemaphoreUI ac
   "TRUENAS_VERIFY_SSL_2": "false"
 }
 ```
+
+## Acknowledgements
+
+This project was developed with assistance from GitHub Copilot. The tool suggested code and documentation snippets which were reviewed, edited, and tested by the author.
