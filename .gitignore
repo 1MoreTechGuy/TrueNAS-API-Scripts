@@ -9,3 +9,7 @@ __pycache__/
 # Virtual environments
 venv/
 env/
+
+# Visual Studio Code workspace and settings
+.vscode/
+*.code-workspace
