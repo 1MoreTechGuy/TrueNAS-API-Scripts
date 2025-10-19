@@ -1,0 +1,9 @@
+hosts:
+  - name: TrueNAS-Alpha
+    url: "https://<IP or HOST NAME>"
+    token: "TRUENAS_API_TOKEN"
+    verify_ssl: false
+  - name: TrueNAS-Omega
+    url: "https://<IP or HOST NAME>"
+    token: "TRUENAS_API_TOKEN"
+    verify_ssl: false
