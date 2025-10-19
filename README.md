@@ -13,6 +13,10 @@ Install dependencies:
 ```bash
 python3 -m pip install websockets pyyaml
 ```
+Or
+```bash
+sudo apt install python3-webscockets pyyaml-env-tag
+```
 
 ## Quick Start
 
@@ -100,9 +104,11 @@ Run `python3 truenas_upgrade_apps.py -h` to display command-line help.
 
 ## SemaphoreUI
 
-This script can be automated via platforms such as SemaphoreUI.
+This script can be automated via platforms such as SemaphoreUI. 
 
-A variable group can be used to define the environment variables. SemaphoreUI acceptes JSON as way to mass upload the variables and values.
+REMINDER: You need to install the dependencies on your semaphore host system or instance before running this script.
+
+A variable group can be used to define the environment variables. SemaphoreUI accepts JSON as way to mass upload the variables and values.
 
 ```json
 {
