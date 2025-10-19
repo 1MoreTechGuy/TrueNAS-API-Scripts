@@ -1,6 +1,13 @@
 # TrueNAS API Scripts
 
-Scripts to connect to one or more TrueNAS instances and perform actions via the TrueNAS API. This script was developed and tested against the TrueNAS API version v25.10.0. Refer to the documentation at https://api.truenas.com/v25.10/ for API details and compatibility notes.
+Scripts to connect to one or more TrueNAS instances and perform actions via the TrueNAS API.
+
+Notes on versions:
+- The main script (`truenas_upgrade_apps.py` in the repository root) was developed and tested
+  against the TrueNAS API version v25.10.0. Refer to https://api.truenas.com/v25.10/ for
+  that API's details.
+- A compatibility copy targeting older TrueNAS API versions is provided under the
+  `v25.04/` directory (`v25.04/truenas_upgrade_apps.py`) and defaults to `v25.04.2`.
 
 ## Dependencies
 
@@ -102,7 +109,7 @@ export TRUENAS_VERIFY_SSL_2="false"
 
 API version override
 
-You can override the API version the script uses by setting the `TRUENAS_API_VERSION` environment variable or passing `--api-version` on the command line. If not provided the script defaults to `v25.10.0`.
+You can override the API version the script uses by setting the `TRUENAS_API_VERSION` environment variable or passing `--api-version` on the command line. The default for the root script is `v25.10.0`. The compatibility copy in `v25.04/` defaults to `v25.04.2`.
 
 ## Troubleshooting
 
