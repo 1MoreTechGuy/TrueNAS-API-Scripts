@@ -2,7 +2,6 @@ hosts:
   - name: TrueNAS-Alpha
     url: "<IP or HOST NAME>"
     token: "<TRUENAS_API_TOKEN>"
-    # Optional: username associated with the API key when using API_KEY_PLAIN
     username: "<API_KEY_USERNAME>"
     verify_ssl: false
   - name: TrueNAS-Omega
