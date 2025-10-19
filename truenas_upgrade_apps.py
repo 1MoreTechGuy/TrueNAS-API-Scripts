@@ -8,6 +8,7 @@ This file was created with the assistance of GitHub Copilot. Review and testing 
 
 API Version:
 This script was developed and tested against the TrueNAS API version v25.10.0.
+You can override the API version at runtime via the `TRUENAS_API_VERSION` environment variable or the `--api-version` CLI flag.
 """
 
 import asyncio
@@ -32,8 +33,11 @@ class TrueNASHost:
 
 class TrueNASAppManager:
     """Handles TrueNAS application operations"""
-    def __init__(self, host: TrueNASHost):
+    def __init__(self, host: TrueNASHost, api_version: str = 'v25.10.0'):
         self.host = host
+        # Store the API version to use for requests (e.g. 'v25.10.0')
+        self.api_version = api_version.lstrip('/')
+
         # Create SSL context depending on host.verify_ssl
         self.ssl_context = self._create_ssl_context(host.verify_ssl)
 
@@ -54,7 +58,7 @@ class TrueNASAppManager:
         else:
             ws_scheme = 'wss'
 
-        self.ws_url = f"{ws_scheme}://{host_netloc}/api/v25.10.0"
+        self.ws_url = f"{ws_scheme}://{host_netloc}/api/{self.api_version}"
 
     @staticmethod
     def _create_ssl_context(verify_ssl: bool = False) -> ssl.SSLContext:
@@ -164,17 +168,21 @@ async def main() -> None:
     parser = ArgumentParser(description='TrueNAS Apps Upgrade Tool')
     parser.add_argument('-v', '--verbose', action='store_true',
                        help='Show detailed information about all apps')
+    parser.add_argument('--api-version', dest='api_version', default=None,
+                       help='Override the TrueNAS API version to use (e.g. v25.10.0)')
     args = parser.parse_args()
     
     try:
         inventory = get_truenas_config()
+        # Determine API version: CLI flag takes precedence, then env var, then default
+        api_version = args.api_version or os.getenv('TRUENAS_API_VERSION') or 'v25.10.0'
         all_results = {}
         
         # Process all hosts
         for host in inventory:
             if not host.url or not host.token:
                 continue
-            manager = TrueNASAppManager(host)
+            manager = TrueNASAppManager(host, api_version=api_version)
             apps_info, upgrades = await manager.process_apps()
             all_results[host.name] = (apps_info, upgrades)
         

@@ -38,6 +38,14 @@ Use `-v` / `--verbose` to display detailed app info:
 python3 truenas_upgrade_apps.py -v
 ```
 
+Specify the API version to use with `--api-version` or the `TRUENAS_API_VERSION` environment variable. Example:
+
+```bash
+python3 truenas_upgrade_apps.py --api-version v25.10.0
+# or via env var
+TRUENAS_API_VERSION=v25.10.0 python3 truenas_upgrade_apps.py
+```
+
 ## Usage
 
 ```
@@ -91,6 +99,10 @@ export TRUENAS_VERIFY_SSL_2="false"
 
 - The script defaults to `inventory.yaml` in the working directory. Use `TRUENAS_INVENTORY` to override.
 - Inventory files and environment variables contain API tokens and should not be committed to version control. This repo ignores `inventory.yaml` and `inventory.yml`.
+
+API version override
+
+You can override the API version the script uses by setting the `TRUENAS_API_VERSION` environment variable or passing `--api-version` on the command line. If not provided the script defaults to `v25.10.0`.
 
 ## Troubleshooting
 
