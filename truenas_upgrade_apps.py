@@ -17,6 +17,7 @@ import ssl
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
 import websockets
 import yaml
@@ -33,12 +34,39 @@ class TrueNASAppManager:
     """Handles TrueNAS application operations"""
     def __init__(self, host: TrueNASHost):
         self.host = host
-        self.ssl_context = self._create_ssl_context()
-        self.ws_url = f"{host.url.replace('https://', 'wss://')}/api/v25.10.0"
+        # Create SSL context depending on host.verify_ssl
+        self.ssl_context = self._create_ssl_context(host.verify_ssl)
+
+        # Normalize host URL: allow plain host/IP or full URL with scheme
+        parsed = urlparse(host.url)
+        if parsed.scheme:
+            # If a scheme is present, prefer the network location (netloc). Some inputs may put host in path.
+            host_netloc = parsed.netloc or parsed.path
+        else:
+            # No scheme provided, assume the value is host[:port]
+            host_netloc = host.url
+
+        host_netloc = host_netloc.rstrip('/')
+
+        # Choose WebSocket scheme: default to secure (wss) unless explicit http scheme provided
+        if parsed.scheme == 'http':
+            ws_scheme = 'ws'
+        else:
+            ws_scheme = 'wss'
+
+        self.ws_url = f"{ws_scheme}://{host_netloc}/api/v25.10.0"
 
     @staticmethod
-    def _create_ssl_context() -> ssl.SSLContext:
-        """Create SSL context for WebSocket connection"""
+    def _create_ssl_context(verify_ssl: bool = False) -> ssl.SSLContext:
+        """Create SSL context for WebSocket connection.
+
+        If verify_ssl is True, return a default context that verifies certificates.
+        If False, return a context that disables verification (for self-signed certs).
+        """
+        if verify_ssl:
+            return ssl.create_default_context()
+
+        # Default to insecure context when verification is disabled to preserve previous behavior
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE

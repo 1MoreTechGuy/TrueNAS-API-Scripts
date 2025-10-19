@@ -61,12 +61,13 @@ Example `inventory.yaml`:
 ```yaml
 hosts:
   - name: TrueNAS-Alpha
-    url: "https://<IP OR HOSTNAME>"
-    token: "TRUENAS_API_TOKEN"
+    # URL may be a bare hostname or IP (scheme optional). e.g. "truenas.local" or "192.168.1.5"
+    url: "<IP OR HOSTNAME>"
+    token: "<TRUENAS_API_TOKEN>"
     verify_ssl: false
   - name: TrueNAS-Omega
-    url: "https://<IP OR HOSTNAME>"
-    token: "TRUENAS_API_TOKEN"
+    url: "<IP OR HOSTNAME>"
+    token: "<TRUENAS_API_TOKEN>"
     verify_ssl: false
 ```
 
@@ -75,13 +76,13 @@ hosts:
 You can supply hosts using numbered environment variables. Example:
 
 ```bash
-export TRUENAS_URL_1="https://<IP OR HOSTNAME>"
-export TRUENAS_TOKEN_1="TRUENAS_API_TOKEN"
+export TRUENAS_URL_1="<IP OR HOSTNAME>"
+export TRUENAS_TOKEN_1="<TRUENAS_API_TOKEN>"
 export TRUENAS_NAME_1="TrueNAS-Alpha"
 export TRUENAS_VERIFY_SSL_1="false"
 
-export TRUENAS_URL_2="https://<IP OR HOSTNAME>"
-export TRUENAS_TOKEN_2="TRUENAS_API_TOKEN"
+export TRUENAS_URL_2="<IP OR HOSTNAME>"
+export TRUENAS_TOKEN_2="<TRUENAS_API_TOKEN>"
 export TRUENAS_NAME_2="TrueNAS-Omega"
 export TRUENAS_VERIFY_SSL_2="false"
 ```
@@ -96,6 +97,14 @@ export TRUENAS_VERIFY_SSL_2="false"
 - Authentication failed: verify the API tokens and that the user has necessary permissions.
 - Connection errors: ensure the TrueNAS URL is reachable and WebSocket (wss) access is allowed.
 - SSL verification: set `verify_ssl: false` in your inventory for self-signed certs or set the `TRUENAS_VERIFY_SSL_<n>` env var to `false`.
+
+Input formats accepted for the `url`/`TRUENAS_URL_<n>` fields:
+
+- Bare hostname or IP: `truenas.local` or `192.168.1.5`
+- Hostname/IP with port: `truenas.local:8443` or `192.168.1.5:8443`
+- Full URL (scheme allowed): `https://truenas.local` or `http://192.168.1.5:80`
+
+When a scheme is not provided the script defaults to secure WebSockets (`wss://`). If you explicitly provide `http://`, the script will use `ws://`.
 
 ## Help
 
@@ -112,12 +121,12 @@ A variable group can be used to define the environment variables. SemaphoreUI ac
 
 ```json
 {
-  "TRUENAS_URL_1": "https://<IP OR HOSTNAME>",
-  "TRUENAS_TOKEN_1": "TRUENAS_API_TOKEN",
+  "TRUENAS_URL_1": "<IP OR HOSTNAME>",
+  "TRUENAS_TOKEN_1": "<TRUENAS_API_TOKEN>",
   "TRUENAS_NAME_1": "TrueNAS-Alpha",
   "TRUENAS_VERIFY_SSL_1": "false",
-  "TRUENAS_URL_2": "https://<IP OR HOSTNAME>",
-  "TRUENAS_TOKEN_2": "TRUENAS_API_TOKEN",
+  "TRUENAS_URL_2": "<IP OR HOSTNAME>",
+  "TRUENAS_TOKEN_2": "<TRUENAS_API_TOKEN>",
   "TRUENAS_NAME_2": "TrueNAS-Omega",
   "TRUENAS_VERIFY_SSL_2": "false"
 }
