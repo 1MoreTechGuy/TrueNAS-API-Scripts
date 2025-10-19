@@ -1,0 +1,11 @@
+# Ignore inventory files that may contain secrets or environment-specific values
+inventory.yaml
+inventory.yml
+
+# Common Python artefacts
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+env/
