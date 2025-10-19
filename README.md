@@ -56,15 +56,28 @@ TRUENAS_API_VERSION=v25.10.0 python3 truenas_upgrade_apps.py
 ## Usage
 
 ```
-Usage: truenas_upgrade_apps.py [-h] [-v]
-
-TrueNAS Apps Upgrade Tool
+python3 truenas_upgrade_apps.py [-h] [-v] [--api-version API_VERSION]
 
 Options:
-  -h, --help     show this help message and exit
-  -v, --verbose  Show detailed information about all apps
+
+- -h, --help: show help and exit
+- -v, --verbose: show detailed information about all apps
+- --api-version: override API version used by the script (e.g. v25.10.0)
 ```
 
+Examples:
+
+- Run the script (defaults to v25.10.0):
+
+```bash
+python3 truenas_upgrade_apps.py
+```
+
+- Run the script but force a different API version (advanced use):
+
+```bash
+python3 truenas_upgrade_apps.py --api-version v26.04
+```
 ## Configuration
 
 You can provide hosts via an inventory YAML file or using environment variables.
