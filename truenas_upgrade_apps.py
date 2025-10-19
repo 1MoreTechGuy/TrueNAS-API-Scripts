@@ -5,6 +5,9 @@ This script connects to TrueNAS instances and initiates application upgrades whe
 
 Acknowledgement:
 This file was created with the assistance of GitHub Copilot. Review and testing were performed by the author.
+
+API Version:
+This script was developed and tested against the TrueNAS API version v25.10.0.
 """
 
 import asyncio
@@ -31,7 +34,7 @@ class TrueNASAppManager:
     def __init__(self, host: TrueNASHost):
         self.host = host
         self.ssl_context = self._create_ssl_context()
-        self.ws_url = f"{host.url.replace('https://', 'wss://')}/api/current"
+        self.ws_url = f"{host.url.replace('https://', 'wss://')}/api/v25.10.0"
 
     @staticmethod
     def _create_ssl_context() -> ssl.SSLContext:

@@ -1,6 +1,6 @@
 # TrueNAS API Scripts
 
-Scripts to connect to one or more TrueNAS instances and perform actions via the TrueNAS API. Check out https://api.truenas.com/v25.10/ for more information.
+Scripts to connect to one or more TrueNAS instances and perform actions via the TrueNAS API. This script was developed and tested against the TrueNAS API version v25.10.0. Refer to the documentation at https://api.truenas.com/v25.10/ for API details and compatibility notes.
 
 ## Dependencies
 
