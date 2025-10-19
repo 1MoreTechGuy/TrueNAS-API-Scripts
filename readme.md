@@ -1,0 +1,1 @@
+Dependencies: python3-websockets
