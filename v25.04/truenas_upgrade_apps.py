@@ -23,9 +23,9 @@ from urllib.parse import urlparse
 import websockets
 import yaml
 
-@dataclass
+@dataclass  # pylint: disable=too-few-public-methods
 class TrueNASHost:
-    """Data class for TrueNAS host configuration"""
+    """Data class for TrueNAS host configuration."""
     name: str
     url: str
     token: str
@@ -46,7 +46,8 @@ class TrueNASAppManager:
         # Normalize host URL: allow plain host/IP or full URL with scheme
         parsed = urlparse(host.url)
         if parsed.scheme:
-            # If a scheme is present, prefer the network location (netloc). Some inputs may put host in path.
+            # If a scheme is present, prefer the network location (netloc).
+            # Some inputs may put the host value in the path component.
             host_netloc = parsed.netloc or parsed.path
         else:
             # No scheme provided, assume the value is host[:port]
@@ -79,7 +80,9 @@ class TrueNASAppManager:
         return context
 
     async def process_apps(self) -> Tuple[Dict, List]:
-        """Process all app operations for a TrueNAS instance"""
+        """Process all app operations for a TrueNAS instance."""
+        # websockets.connect is dynamic at runtime (pylint E1101 false positive)
+        # pylint: disable=no-member
         async with websockets.connect(self.ws_url, ssl=self.ssl_context) as websocket:
             await self._authenticate(websocket)
             apps_response = await self._get_apps_list(websocket)
@@ -116,7 +119,7 @@ class TrueNASAppManager:
         await websocket.send(json.dumps(auth_msg))
         auth_result = json.loads(await websocket.recv())
         if 'error' in auth_result:
-            raise Exception(f"Authentication failed: {auth_result['error']}")
+            raise RuntimeError(f"Authentication failed: {auth_result['error']}")
 
     async def _get_apps_list(self, websocket) -> Dict:
         """Get list of installed apps"""
@@ -150,12 +153,14 @@ class TrueNASAppManager:
         return upgrade_results
 
 def get_truenas_config() -> List[TrueNASHost]:
-    """Load TrueNAS configuration from environment or file"""
+    """Load TrueNAS configuration from environment or file."""
     hosts = _get_hosts_from_env()
     if not hosts:
         hosts = _get_hosts_from_file()
     if not hosts:
-        raise Exception("No configuration found. Set environment variables or provide inventory file.")
+        raise RuntimeError(
+            "No configuration found. Set environment variables or provide inventory file."
+        )
     return hosts
 
 def _get_hosts_from_env() -> List[TrueNASHost]:
@@ -180,8 +185,9 @@ def _get_hosts_from_file() -> Optional[List[TrueNASHost]]:
     """Get host configurations from inventory file"""
     inventory_path = os.getenv('TRUENAS_INVENTORY', 'inventory.yaml')
     if os.path.exists(inventory_path):
-        with open(inventory_path, 'r') as file:
-            inventory = yaml.safe_load(file)
+        # Explicitly specify encoding for portability
+        with open(inventory_path, 'r', encoding='utf-8') as file:
+            inventory = yaml.safe_load(file) or {}
             return [TrueNASHost(**host) for host in inventory.get('hosts', [])]
     return None
 
@@ -193,34 +199,36 @@ async def main() -> None:
     parser.add_argument('--api-version', dest='api_version', default=None,
                        help='Override the TrueNAS API version to use (e.g. v25.04.2)')
     args = parser.parse_args()
-    
+
     try:
         inventory = get_truenas_config()
         # Determine API version: CLI flag takes precedence, then env var, then default
-        api_version = args.api_version or os.getenv('TRUENAS_API_VERSION') or 'v25.04.2'
+        api_version = (
+            args.api_version or os.getenv('TRUENAS_API_VERSION') or 'v25.04.2'
+        )
         all_results = {}
-        
         # Process all hosts
         for host in inventory:
             if not host.url or not host.token or not getattr(host, 'username', None):
-                raise Exception(f"Host '{host.name}' is missing required configuration: url, token, and username are required for API_KEY_PLAIN authentication.")
+                raise RuntimeError(
+                    f"Host '{host.name}' is missing required configuration: "
+                    "url, token, and username are required for API_KEY_PLAIN authentication."
+                )
             manager = TrueNASAppManager(host, api_version=api_version)
             apps_info, upgrades = await manager.process_apps()
             all_results[host.name] = (apps_info, upgrades)
-        
         # Display results
         _display_results(all_results, args.verbose)
-            
-    except Exception as e:
+    except (RuntimeError, OSError) as e:
+        # Report common runtime errors to the operator; other exceptions will
+        # propagate for debugging during development.
         print(f"\nError: {str(e)}")
 
 def _display_results(all_results: Dict, verbose: bool) -> None:
     """Display processing results"""
     if verbose:
         _display_verbose_info(all_results)
-    
     upgrades_found = _display_upgrades(all_results)
-    
     if not upgrades_found:
         print("\n✨ All applications are up to date!")
 
@@ -252,9 +260,15 @@ def _display_upgrades(all_results: Dict) -> bool:
                 print(f"\n{host_name}")
                 for app, result in upgrades:
                     if 'error' in result:
-                        print(f"❌ {app['name']}: {app['version']} → {app['latest_version']} - {result['error']}")
+                        print(
+                            f"❌ {app['name']}: {app['version']} → {app['latest_version']} - "
+                            f"{result['error']}"
+                        )
                     else:
-                        print(f"✅ {app['name']}: {app['version']} → {app['latest_version']} - Update initiated")
+                        print(
+                            f"✅ {app['name']}: {app['version']} → {app['latest_version']} - "
+                            "Update initiated"
+                        )
     return upgrades_found
 
 if __name__ == "__main__":

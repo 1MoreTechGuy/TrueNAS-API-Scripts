@@ -1,14 +1,16 @@
-"""
-truenas_upgrade_apps.py
+"""truenas_upgrade_apps.py
 
-This script connects to TrueNAS instances and initiates application upgrades where available.
+This script connects to TrueNAS instances and initiates application
+upgrades where available.
 
 Acknowledgement:
-This file was created with the assistance of GitHub Copilot. Review and testing were performed by the author.
+This file was created with the assistance of GitHub Copilot. Review and
+testing were performed by the author.
 
 API Version:
-This script was developed and tested against the TrueNAS API version v25.10.0.
-You can override the API version at runtime via the `TRUENAS_API_VERSION` environment variable or the `--api-version` CLI flag.
+This script was developed and tested against the TrueNAS API version
+v25.10.0. You can override the API version at runtime via the
+`TRUENAS_API_VERSION` environment variable or the `--api-version` CLI flag.
 """
 
 import asyncio
@@ -23,13 +25,22 @@ from urllib.parse import urlparse
 import websockets
 import yaml
 
-@dataclass
+@dataclass  # pylint: disable=too-few-public-methods
 class TrueNASHost:
-    """Data class for TrueNAS host configuration"""
+    """Data class for TrueNAS host configuration."""
     name: str
     url: str
     token: str
     verify_ssl: bool = False
+
+    def as_dict(self) -> dict:
+        """Return a simple dictionary representation of the host."""
+        return {
+            'name': self.name,
+            'url': self.url,
+            'token': self.token,
+            'verify_ssl': self.verify_ssl,
+        }
 
 class TrueNASAppManager:
     """Handles TrueNAS application operations"""
@@ -44,7 +55,8 @@ class TrueNASAppManager:
         # Normalize host URL: allow plain host/IP or full URL with scheme
         parsed = urlparse(host.url)
         if parsed.scheme:
-            # If a scheme is present, prefer the network location (netloc). Some inputs may put host in path.
+            # If a scheme is present, prefer the network location (netloc).
+            # Some inputs may put host in path.
             host_netloc = parsed.netloc or parsed.path
         else:
             # No scheme provided, assume the value is host[:port]
@@ -77,7 +89,10 @@ class TrueNASAppManager:
         return context
 
     async def process_apps(self) -> Tuple[Dict, List]:
-        """Process all app operations for a TrueNAS instance"""
+        """Process all app operations for a TrueNAS instance."""
+        # websockets.connect is dynamically provided by the websockets
+        # package and static analyzers may not see members on it.
+        # pylint: disable=no-member
         async with websockets.connect(self.ws_url, ssl=self.ssl_context) as websocket:
             await self._authenticate(websocket)
             apps_response = await self._get_apps_list(websocket)
@@ -95,7 +110,7 @@ class TrueNASAppManager:
         await websocket.send(json.dumps(auth_msg))
         auth_result = json.loads(await websocket.recv())
         if 'error' in auth_result:
-            raise Exception(f"Authentication failed: {auth_result['error']}")
+            raise RuntimeError(f"Authentication failed: {auth_result['error']}")
 
     async def _get_apps_list(self, websocket) -> Dict:
         """Get list of installed apps"""
@@ -134,7 +149,9 @@ def get_truenas_config() -> List[TrueNASHost]:
     if not hosts:
         hosts = _get_hosts_from_file()
     if not hosts:
-        raise Exception("No configuration found. Set environment variables or provide inventory file.")
+        raise RuntimeError(
+            "No configuration found. Set environment variables or provide inventory file."
+        )
     return hosts
 
 def _get_hosts_from_env() -> List[TrueNASHost]:
@@ -158,8 +175,9 @@ def _get_hosts_from_file() -> Optional[List[TrueNASHost]]:
     """Get host configurations from inventory file"""
     inventory_path = os.getenv('TRUENAS_INVENTORY', 'inventory.yaml')
     if os.path.exists(inventory_path):
-        with open(inventory_path, 'r') as file:
-            inventory = yaml.safe_load(file)
+        # Explicitly specify encoding for portability
+        with open(inventory_path, 'r', encoding='utf-8') as file:
+            inventory = yaml.safe_load(file) or {}
             return [TrueNASHost(**host) for host in inventory.get('hosts', [])]
     return None
 
@@ -171,13 +189,15 @@ async def main() -> None:
     parser.add_argument('--api-version', dest='api_version', default=None,
                        help='Override the TrueNAS API version to use (e.g. v25.10.0)')
     args = parser.parse_args()
-    
     try:
         inventory = get_truenas_config()
-        # Determine API version: CLI flag takes precedence, then env var, then default
-        api_version = args.api_version or os.getenv('TRUENAS_API_VERSION') or 'v25.10.0'
+        # Determine API version: CLI flag takes precedence, then env var,
+        # then default
+        api_version = (
+            args.api_version or os.getenv('TRUENAS_API_VERSION') or 'v25.10.0'
+        )
         all_results = {}
-        
+
         # Process all hosts
         for host in inventory:
             if not host.url or not host.token:
@@ -185,11 +205,13 @@ async def main() -> None:
             manager = TrueNASAppManager(host, api_version=api_version)
             apps_info, upgrades = await manager.process_apps()
             all_results[host.name] = (apps_info, upgrades)
-        
+
         # Display results
         _display_results(all_results, args.verbose)
-            
-    except Exception as e:
+
+    except (RuntimeError, OSError) as e:
+        # Known runtime / IO errors are reported to the operator; allow other
+        # exceptions to propagate for debugging.
         print(f"\nError: {str(e)}")
 
 def _display_results(all_results: Dict, verbose: bool) -> None:
@@ -212,7 +234,9 @@ def _display_verbose_info(all_results: Dict) -> None:
                 print(f"- {app.get('name', 'Unknown')}")
                 print(f"  Version: {app.get('version', 'Unknown')}")
                 print(f"  Latest: {app.get('latest_version', 'Unknown')}")
-                print(f"  Update: {'Yes' if app.get('upgrade_available', False) else 'No'}")
+                print(
+                    f"  Update: {'Yes' if app.get('upgrade_available', False) else 'No'}"
+                )
         else:
             print("No apps found")
         print()
@@ -227,13 +251,19 @@ def _display_upgrades(all_results: Dict) -> bool:
                 if not upgrades_found:
                     print("\nProcessing updates...")
                     upgrades_found = True
-                print(f"\n{host_name}")
+                print("\n" + host_name)
                 for app, result in upgrades:
-                    if 'error' in result:
-                        print(f"❌ {app['name']}: {app['version']} → {app['latest_version']} - {result['error']}")
+                    name = app.get('name', 'unknown')
+                    ver = app.get('version', 'unknown')
+                    latest = app.get('latest_version', 'unknown')
+                    if isinstance(result, dict) and 'error' in result:
+                        print(
+                            f"❌ {name}: {ver} → {latest} - {result['error']}"
+                        )
                     else:
-                        print(f"✅ {app['name']}: {app['version']} → {app['latest_version']} - Update initiated")
+                        print(f"✅ {name}: {ver} → {latest} - Update initiated")
     return upgrades_found
+
 
 if __name__ == "__main__":
     asyncio.run(main())
