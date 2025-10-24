@@ -203,8 +203,15 @@ async def main() -> None:
             if not host.url or not host.token:
                 continue
             manager = TrueNASAppManager(host, api_version=api_version)
-            apps_info, upgrades = await manager.process_apps()
-            all_results[host.name] = (apps_info, upgrades)
+            try:
+                apps_info, upgrades = await manager.process_apps()
+                all_results[host.name] = (apps_info, upgrades)
+            except ssl.SSLError as exc:
+                # Log SSL problems and continue with other hosts
+                print(f"SSL error for {host.name} ({host.url}): {exc}")
+            except (RuntimeError, OSError) as exc:  # pragma: no cover - perimeter safety
+                # Catch common host-level runtime/IO errors, report and continue
+                print(f"Error processing {host.name} ({host.url}): {exc}")
 
         # Display results
         _display_results(all_results, args.verbose)
@@ -218,9 +225,9 @@ def _display_results(all_results: Dict, verbose: bool) -> None:
     """Display processing results"""
     if verbose:
         _display_verbose_info(all_results)
-    
+
     upgrades_found = _display_upgrades(all_results)
-    
+
     if not upgrades_found:
         print("\n✨ All applications are up to date!")
 

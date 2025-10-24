@@ -210,13 +210,23 @@ async def main() -> None:
         # Process all hosts
         for host in inventory:
             if not host.url or not host.token or not getattr(host, 'username', None):
-                raise RuntimeError(
-                    f"Host '{host.name}' is missing required configuration: "
-                    "url, token, and username are required for API_KEY_PLAIN authentication."
+                print(
+                    f"Skipping host '{host.name}': missing required configuration (url, token, username)."
                 )
+                all_results[host.name] = ({'error': 'missing configuration'}, [])
+                continue
             manager = TrueNASAppManager(host, api_version=api_version)
-            apps_info, upgrades = await manager.process_apps()
-            all_results[host.name] = (apps_info, upgrades)
+            try:
+                apps_info, upgrades = await manager.process_apps()
+                all_results[host.name] = (apps_info, upgrades)
+            except ssl.SSLError as exc:
+                # Log SSL problems and continue with other hosts
+                print(f"SSL error for {host.name} ({host.url}): {exc}")
+                all_results[host.name] = ({'error': str(exc)}, [])
+            except (RuntimeError, OSError) as exc:
+                # Report known runtime/IO errors and continue
+                print(f"Error processing {host.name} ({host.url}): {exc}")
+                all_results[host.name] = ({'error': str(exc)}, [])
         # Display results
         _display_results(all_results, args.verbose)
     except (RuntimeError, OSError) as e:

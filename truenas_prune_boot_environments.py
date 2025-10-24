@@ -417,7 +417,7 @@ def _sort_newest_first_ids(ids: List[str], env_meta: List[dict]) -> List[str]:
 
 
 def _compute_suggestions(env_meta: List[dict], items: List[dict], keep_minimum: int,
-                         keep_maximum: Optional[int], _override_warnings: bool, args) -> tuple:
+                         keep_maximum: Optional[int], _override_warnings: bool, args) -> tuple:  # pylint: disable=too-many-locals
     """Compute proposed keep/delete sets for a given host.
 
     Returns a tuple (proposed_keep, proposed_delete, keep_reasons).
@@ -431,12 +431,11 @@ def _compute_suggestions(env_meta: List[dict], items: List[dict], keep_minimum: 
     pool_free_pct = _compute_pool_free_pct(items)
     pool_picked = _get_pool_picked(items)
 
-    # Centralize health and emergency free-space checks into a small helper
-    # Health/emergency check must be aware of the operator-requested
-    # keep_minimum so emergency deletions never reduce kept envs below
-    # the explicit minimum the operator requested (highest precedence).
-    health_result = _check_health_and_emergency(pool_picked, pool_free_pct, args,
-                                                env_meta, keep_minimum)
+    # Centralize health and emergency free-space checks into a small helper.
+    # Keep the helper call simple to reduce local temp variables here.
+    health_result = _check_health_and_emergency(
+        pool_picked, pool_free_pct, args, env_meta, keep_minimum
+    )
     if health_result is not None:
         # health_result is (keep_set, delete_set, keep_reasons, delete_reasons)
         return health_result
@@ -445,17 +444,16 @@ def _compute_suggestions(env_meta: List[dict], items: List[dict], keep_minimum: 
     # flag is only used to avoid proposing deletions when the operator did
     # not request a maximum (conservative behavior).
     free_space_minimum = _determine_free_space_minimum(args)
+    # Compute free-space-ok flag defensively in one expression.
     try:
-        free_space_ok = (
-            pool_free_pct is not None
-            and float(pool_free_pct) >= float(free_space_minimum)
+        free_space_ok = pool_free_pct is not None and float(pool_free_pct) >= float(
+            free_space_minimum
         )
     except (TypeError, ValueError):
         free_space_ok = False
 
-    # If the pool has sufficient free space and the operator didn't request
-    # a maximum, keep everything (no deletions). This keeps the behavior
-    # conservative by default.
+    # Conservative behavior: if pool looks roomy and operator didn't request
+    # a maximum, avoid proposing any deletions.
     if keep_maximum is None and free_space_ok:
         return set(all_ids), set(), {}, {}
 
@@ -641,12 +639,21 @@ async def inspect_all_hosts(inventory: List[TrueNASHost], api_version: str):
             continue
         inspector = TrueNASBootInspector(host, api_version=api_version)
         inspectors[host.name] = inspector
-        state = await inspector.inspect_boot()
-        results[host.name] = state
+        try:
+            state = await inspector.inspect_boot()
+            results[host.name] = state
+        except ssl.SSLError as exc:
+            # Log SSL problems and continue with other hosts
+            print(f"SSL error for {host.name} ({host.url}): {exc}")
+            results[host.name] = {'error': str(exc)}
+        except (RuntimeError, OSError) as exc:
+            # Report known runtime/IO errors and continue
+            print(f"Error inspecting {host.name} ({host.url}): {exc}")
+            results[host.name] = {'error': str(exc)}
     return results, inspectors
 
 
-def _print_delete_plan(delete_plan: Dict) -> None:
+def _print_delete_plan(delete_plan: Dict) -> None:  # pylint: disable=too-many-locals
     """Print a concise summary of planned deletions for confirmation."""
     print('\n\nPlanned Changes Summary:')
     for hn, plan in delete_plan.items():
@@ -736,7 +743,7 @@ def _relative_age(created_ms: Optional[int]) -> str:
         return ''
 
 
-def _print_summary_plan(delete_plan: Dict) -> None:
+def _print_summary_plan(delete_plan: Dict) -> None:  # pylint: disable=too-many-locals
     """Print a concise, human-first summary.
 
     For each host show a short header, any host notes, a small sample of kept
@@ -898,7 +905,7 @@ def _compute_always_keep(env_meta: List[dict]) -> set:
 
 
 def _select_emergency_deletions(env_meta: List[dict], free_num: float, size_num: float,
-                                free_space_minimum: float, keep_minimum: int) -> (set, set, dict):
+                                free_space_minimum: float, keep_minimum: int) -> (set, set, dict):  # pylint: disable=too-many-locals
     """Select oldest non-protected envs until free% > free_space_minimum.
 
     Returns (proposed_keep, proposed_delete).
@@ -1222,7 +1229,7 @@ def _build_combined_plan(results: Dict, inspectors: Dict, args, keep_cfg: KeepCo
     return combined_plan
 
 
-async def _confirm_and_execute_deletions(delete_plan: Dict, auto_approve: bool) -> None:
+async def _confirm_and_execute_deletions(delete_plan: Dict, auto_approve: bool) -> None:  # pylint: disable=too-many-locals,too-many-branches
     """Prompt for confirmation (unless auto_approve) and execute deletions.
 
     delete_plan is a mapping of host_name -> {inspector, env_meta, to_delete, to_keep}.
