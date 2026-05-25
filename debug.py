@@ -116,12 +116,12 @@ async def _check_one_ws(host):
 
 
 async def _check_websockets(hosts):
-    if not hosts:
-        print('No TrueNAS hosts found for websocket connectivity checks.')
-        return
-
     print("\n==  WEBSOCKET CONNECTION CHECK  ==")
     print("==================================")
+    if not hosts:
+        print('No TrueNAS hosts found for websocket connectivity checks.\n')
+        return
+    
     for host in hosts:
         success, ws_url, exc = await _check_one_ws(host)
         if success:
@@ -131,9 +131,17 @@ async def _check_websockets(hosts):
     print()
 
 
+print("\n==  PARSING HOSTS FROM INVENTORY  ==")
+print("==================================")
 all_hosts = []
-all_hosts.extend(_get_hosts_from_env())
-all_hosts.extend(_get_hosts_from_inventory(inventory))
+try:
+    all_hosts.extend(_get_hosts_from_env())
+except Exception as exc:
+    print(f"Error parsing hosts from environment variables: {exc}")
+try:
+    all_hosts.extend(_get_hosts_from_inventory(inventory))
+except Exception as exc:
+    print(f"Error parsing hosts from inventory file: {exc}")
 
 # Deduplicate hosts by URL while preserving order
 seen_urls = set()
@@ -143,6 +151,8 @@ for host_entry in all_hosts:
         continue
     seen_urls.add(host_entry['url'])
     deduped_hosts.append(host_entry)
+print(f'RESULT: {all_hosts.__len__()} Total Host Found, {deduped_hosts.__len__()} Unique Hosts.')
+print(f'CONTENTS: {all_hosts}')
 
 asyncio.run(_check_websockets(deduped_hosts))
 
